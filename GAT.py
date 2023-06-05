@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch_geometric
 import torch_geometric.nn as pyg_nn
 from torch_geometric.nn import GCNConv
+import numpy as np
 
 class FirstNet(torch.nn.Module):
     def __init__(self, num_node_features, num_classes):
@@ -91,6 +92,9 @@ class GNNStack(torch.nn.Module):
     def loss(self, pred, label):
         return F.nll_loss(pred, label)
 class GATGNNModel:
+    def __init__(self):
+        self.highest_acc = 0
+        self.preds = []
     def train(self,data):
         on_gpu = True
         if on_gpu:
@@ -154,9 +158,11 @@ class GATGNNModel:
                 samples_per_label = 2
                 pred_per_label = 2
                 correct_per_label = 2
+                val_preds = []
                 with torch.no_grad():
                     for batch in val_data_loader:
                         _, pred = model(batch).max(dim=1)
+                        val_preds.append(pred.cpu().numpy())
                         correct += float(pred.eq(batch.y.to(device)).sum().item())
                         n_samples += len(batch.y)
                 val_acc = correct / n_samples
@@ -167,11 +173,22 @@ class GATGNNModel:
                 model.eval()
                 correct = 0
                 n_samples = 0
+                test_preds = []
                 with torch.no_grad():
                     for batch in test_data_loader:
                         _, pred = model(batch).max(dim=1)
+                        test_preds.append(pred.cpu().numpy())
                         correct += float(pred.eq(batch.y.to(device)).sum().item())
                         n_samples += len(batch.y)
                 test_acc = correct / n_samples
                 print("Accuracy", test_acc, epoch)
                 print('Test accuracy: {:.4f}'.format(test_acc))
+                if (test_acc > self.highest_acc):
+                    self.highest_acc = test_acc
+                    current_preds = [val_preds,test_preds]
+                    formatted_gat_pred = []
+                    for i in current_preds:
+                        for j in i:
+                            for z in j:
+                                formatted_gat_pred.append(z.flatten())
+                    self.preds = np.array(formatted_gat_pred).reshape(len(formatted_gat_pred),)

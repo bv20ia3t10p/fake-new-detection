@@ -52,6 +52,8 @@ class GCNModel:
     def __init__(self,train_loader,test_loader):
         self.train_loader = train_loader
         self.test_loader=test_loader
+        self.pred = []
+        self.highest_acc = 0
     def fit(self):
         train_loader=self.train_loader
         test_loader=self.test_loader
@@ -111,7 +113,8 @@ class GCNModel:
             df["pred_logit"] = pred.cpu().detach().numpy()[:,0]
             df["pred"] = torch.round(pred).cpu().detach().numpy()[:,0]
             df["true"] = data.y.cpu().numpy()
-            print(df.head(10))
-            break
+            self.pred.append(df['pred'].values)
+            
+            # print(df.head(10))
 
         
